@@ -27,8 +27,7 @@ LOCAL_CFLAGS += \
 	-DCONF_VENDOR=\"unknown\" \
 	-DLOCALEDIR=\"/data/locale\" \
 	-DSHELL
-LOCAL_SHARED_LIBRARIES += \
-	libncurses
+
 LOCAL_STATIC_LIBRARIES += \
 	libbuiltins \
 	libglob \
@@ -36,7 +35,9 @@ LOCAL_STATIC_LIBRARIES += \
 	libtilde \
 	libhistory \
 	libreadline \
-	libclearsilverregex
+	libclearsilverregex \
+	libtermcap
+
 LOCAL_MODULE := bash
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
 
