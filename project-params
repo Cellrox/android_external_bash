@@ -21,6 +21,7 @@
 # hosts, and for debugging.
 
 ignore_change_params() {
+	add_ignore_change Ie209cd53ba07b5c985f58e6c1266bbec354f9ded # Remove the shipping of bash etc files
 	add_ignore_change Ia01f97b3502079a277c090170a7ded048304cb4f # Legal: Add a NOTICE symlink
 }
 

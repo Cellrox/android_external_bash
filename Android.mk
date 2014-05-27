@@ -44,6 +44,10 @@ LOCAL_MODULE_TAGS := eng
 
 include $(BUILD_EXECUTABLE)
 
+
+# Exclude the etc files unless SHIP_BASH_ETC permits them specifically
+ifeq ($(SHIP_BASH_ETC),true)
+
 # ========================================================
 # bash configs
 # ========================================================
@@ -61,6 +65,8 @@ ALL_DEFAULT_INSTALLED_MODULES += $(BASH_CONFIGS)
 
 ALL_MODULES.$(LOCAL_MODULE).INSTALLED := \
     $(ALL_MODULES.$(LOCAL_MODULE).INSTALLED) $(BASH_CONFIGS)
+
+endif #SHIP_BASH_ETC
 
 # ========================================================
 include $(call all-makefiles-under,$(LOCAL_PATH))
