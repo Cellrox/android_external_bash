@@ -48,5 +48,8 @@ ignore_change_params() {
 # be used directly or as an example.
 
 patch_change_params() {
+	add_patch_change I7fe06a83a56e5f9d76215a2ef137074732cf8687 \
+		"bash: update to 4.2 patch level 50"
+		# Shellshock
 	return #Empty
 }
