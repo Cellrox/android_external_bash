@@ -167,6 +167,9 @@ static char *read_a_line __P((int));
 
 static int reserved_word_acceptable __P((int));
 static int yylex __P((void));
+
+static void push_heredoc __P((REDIRECT *));
+static char *mk_alexpansion __P((char *));
 static int alias_expand_token __P((char *));
 static int time_command_acceptable __P((void));
 static int special_case_tokens __P((char *));
@@ -264,7 +267,9 @@ int parser_state;
 
 /* Variables to manage the task of reading here documents, because we need to
    defer the reading until after a complete command has been collected. */
-static REDIRECT *redir_stack[10];
+#define HEREDOC_MAX 16
+
+static REDIRECT *redir_stack[HEREDOC_MAX];
 int need_here_doc;
 
 /* Where shell input comes from.  History expansion is performed on each
@@ -306,7 +311,7 @@ static int global_extglob;
    or `for WORD' begins.  This is a nested command maximum, since the array
    index is decremented after a case, select, or for command is parsed. */
 #define MAX_CASE_NEST	128
-static int word_lineno[MAX_CASE_NEST];
+static int word_lineno[MAX_CASE_NEST+1];
 static int word_top = -1;
 
 /* If non-zero, it is the token that we want read_token to return
@@ -519,42 +524,42 @@ redirection:	'>' WORD
 			  source.dest = 0;
 			  redir.filename = $2;
 			  $$ = make_redirection (source, r_reading_until, redir, 0);
-			  redir_stack[need_here_doc++] = $$;
+			  push_heredoc ($$);
 			}
 	|	NUMBER LESS_LESS WORD
 			{
 			  source.dest = $1;
 			  redir.filename = $3;
 			  $$ = make_redirection (source, r_reading_until, redir, 0);
-			  redir_stack[need_here_doc++] = $$;
+			  push_heredoc ($$);
 			}
 	|	REDIR_WORD LESS_LESS WORD
 			{
 			  source.filename = $1;
 			  redir.filename = $3;
 			  $$ = make_redirection (source, r_reading_until, redir, REDIR_VARASSIGN);
-			  redir_stack[need_here_doc++] = $$;
+			  push_heredoc ($$);
 			}
 	|	LESS_LESS_MINUS WORD
 			{
 			  source.dest = 0;
 			  redir.filename = $2;
 			  $$ = make_redirection (source, r_deblank_reading_until, redir, 0);
-			  redir_stack[need_here_doc++] = $$;
+			  push_heredoc ($$);
 			}
 	|	NUMBER LESS_LESS_MINUS WORD
 			{
 			  source.dest = $1;
 			  redir.filename = $3;
 			  $$ = make_redirection (source, r_deblank_reading_until, redir, 0);
-			  redir_stack[need_here_doc++] = $$;
+			  push_heredoc ($$);
 			}
 	|	REDIR_WORD  LESS_LESS_MINUS WORD
 			{
 			  source.filename = $1;
 			  redir.filename = $3;
 			  $$ = make_redirection (source, r_deblank_reading_until, redir, REDIR_VARASSIGN);
-			  redir_stack[need_here_doc++] = $$;
+			  push_heredoc ($$);
 			}
 	|	LESS_LESS_LESS WORD
 			{
@@ -2430,6 +2435,16 @@ shell_ungetc (c)
     eol_ungetc_lookahead = c;
 }
 
+char *
+parser_remaining_input ()
+{
+  if (shell_input_line == 0)
+    return 0;
+  if (shell_input_line_index < 0 || shell_input_line_index >= shell_input_line_len)
+    return '\0';	/* XXX */
+  return (shell_input_line + shell_input_line_index);
+}
+
 #ifdef INCLUDE_UNUSED
 /* Back the input pointer up by one, effectively `ungetting' a character. */
 static void
@@ -2532,6 +2547,21 @@ yylex ()
 /* When non-zero, we have read the required tokens
    which allow ESAC to be the next one read. */
 static int esacs_needed_count;
+
+static void
+push_heredoc (r)
+     REDIRECT *r;
+{
+  if (need_here_doc >= HEREDOC_MAX)
+    {
+      last_command_exit_value = EX_BADUSAGE;
+      need_here_doc = 0;
+      report_syntax_error (_("maximum here-document count exceeded"));
+      reset_parser ();
+      exit_shell (last_command_exit_value);
+    }
+  redir_stack[need_here_doc++] = r;
+}
 
 void
 gather_here_documents ()
@@ -3870,8 +3900,8 @@ xparse_dolparen (base, string, indp, flags)
   reset_parser ();
   /* reset_parser clears shell_input_line and associated variables */
   restore_input_line_state (&ls);
-  if (interactive)
-    token_to_read = 0;
+
+  token_to_read = 0;
 
   /* Need to find how many characters parse_and_execute consumed, update
      *indp, if flags != 0, copy the portion of the string parsed into RET

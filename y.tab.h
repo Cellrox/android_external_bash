@@ -145,7 +145,7 @@ typedef union YYSTYPE
 {
 
 /* Line 1676 of yacc.c  */
-#line 323 "./parse.y"
+#line 328 "./parse.y"
 
   WORD_DESC *word;		/* the word that we read. */
   int number;			/* the number that we read. */
